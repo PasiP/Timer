@@ -1,40 +1,64 @@
-import { h } from 'preact';
-import { useState, useEffect } from 'preact/hooks';
-import logo from './logo.png';
-import './App.css';
+import { h } from 'preact'
+import { useState, useEffect } from 'preact/hooks'
+import './App.css'
 
-function App() {
-  // Create the count state.
-  const [count, setCount] = useState(0);
-  // Create the counter (+1 every second).
+const Timer = (start, duration, setTimerText, alarm) => {
+  let diff
+  let minutes
+  let seconds
+
+  diff = duration - (((Date.now() - start) / 1000) | 0)
+  console.log(diff)
+  if(diff <= 0){
+    alarm()
+  }
+
+  minutes = (diff / 60) | 0
+  seconds = (diff % 60) | 0
+
+  minutes = minutes < 10 ? "0" + minutes : minutes
+  seconds = seconds < 10 ? "0" + seconds : seconds
+
+  setTimerText(`${minutes}:${seconds}`)
+}
+
+const App = () => {
+  const [timerText, setTimerText] = useState('00:00')
+  const [isAlarmed, setAlarm] = useState(false)
+  const start = Date.now()
+  const audio = new Audio('./alarm-sound.mp3')
+  const queryString = window.location.search
+  const urlParams = new URLSearchParams(queryString)
+  const duration = parseInt(urlParams.get('sec'), 10)
+  let intervalId
+
+  const alarm = () => {
+    console.log('ALARM !!!!')
+    setAlarm(true)
+    audio.play()
+    setTimeout(() => {setAlarm(false)}, 5000)
+    clearInterval(intervalId)
+  }
+
   useEffect(() => {
-    const timer = setTimeout(() => setCount(count + 1), 1000);
-    return () => clearTimeout(timer);
-  }, [count, setCount]);
-  // Return the App component.
+    console.log(`${queryString} ${urlParams.get('sec')}`)
+    audio.load()
+    intervalId = setInterval( () => { Timer(start, duration, setTimerText, alarm) }, 1000)
+  }, [])
+
+  /* Buttons I need:
+  * play/pause, reset, setTime
+  */
+
   return (
     <div className="App">
       <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.jsx</code> and save to reload.
-        </p>
-        <p>
-          Page has been open for <code>{count}</code> seconds.
-        </p>
-        <p>
-          <a
-            className="App-link"
-            href="https://preactjs.com"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Learn Preact
-          </a>
-        </p>
+        <div className="App-container">
+          <code className={isAlarmed ? 'alarmed' : 'notAlarmed'}>{timerText}</code>
+        </div>
       </header>
     </div>
-  );
+  )
 }
 
 export default App;
