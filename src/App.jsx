@@ -8,11 +8,16 @@ function Timer (duration, setTimerText, alarm) {
   this.reset = reset
   this.tick = tick
   this.duration = duration // milliseconds
+  this.setCount = setCount
+  let count = duration
   this.setTimerText = setTimerText
   let timer
-
-  let count = this.duration
   let initialMillis
+
+  function setCount(newCount) {
+    console.log('set new count to: ', newCount)
+    count = newCount
+  }
 
   function start() {
     console.log('Start()')
@@ -39,7 +44,7 @@ function Timer (duration, setTimerText, alarm) {
   }
 
   function tick() {
-    if(this.isRunning === false) {
+    if(this.isRunning === false || count === undefined) {
       return
     }
 
@@ -74,12 +79,14 @@ const App = () => {
   const [timerText, setTimerText] = useState('')
   const [isAlarmed, setAlarm] = useState(false)
   const [isRunning, setRunning] = useState(false)
+  const [editMode, setEditMode] = useState(false)
   const timerId = useRef(null);
   const start = Date.now()
   const audio = new Audio('./alarm-sound.mp3')
   const queryString = window.location.search
   const urlParams = new URLSearchParams(queryString)
   let duration = parseInt(urlParams.get('sec'), 10) * 1000
+  const textInput = useRef(null)
 
   const alarm = () => {
     console.log('ALARM !!!!')
@@ -87,6 +94,27 @@ const App = () => {
     audio.play()
     setTimeout(() => {setAlarm(false)}, 5000)
     setRunning(false)
+  }
+
+  const handleTextChange = (event) => {
+    console.log(event.target.value)
+    if(event.target.value.length === 2) {
+      setTimerText(`${event.target.value}:`)
+    } else {
+      setTimerText(event.target.value)
+    }
+  }
+
+  const convertToSeconds = (minutes, seconds) => {
+    const min = parseInt(minutes)
+    const sec = parseInt(seconds)
+
+    if(isNaN(min) || isNaN(sec)) {
+      return 0
+    }
+
+    return (min * 60 + sec) * 1000
+
   }
 
   let playPauseButton
@@ -104,6 +132,26 @@ const App = () => {
     }
   }
 
+  let setTimeButton
+  if(editMode) {
+    setTimeButton = <button className="btn"
+    onClick={() => {
+      setEditMode(false)
+      console.log('SET TIME: ', timerText.substring(0,2), ':', timerText.substring(3))
+      duration = convertToSeconds(timerText.substring(0,2), timerText.substring(3))
+      timerId.current.setCount(duration)
+      timerId.current.duration = duration
+    }} >Set</button>
+  } else {
+    setTimeButton = <button className="btn"
+      onClick={ () => {
+        console.log('setTime()')
+        setTimerText('')
+        setEditMode(true)
+        textInput.current.focus()
+      }} >Set Time</button>
+  }
+
   useEffect(() => {
     if(isNaN(duration)) {
       duration = 0
@@ -118,14 +166,22 @@ const App = () => {
     <div className="App">
       <header className="App-header">
         <div className="App-container">
-          <code className={isAlarmed ? 'alarmed' : 'notAlarmed'}>{timerText}</code>
+          <input ref={textInput}
+            value={timerText}
+            maxlength='5'
+            className={isAlarmed ? 'alarmed' : 'notAlarmed'}
+            oninput={handleTextChange} />
           <div className="App-buttons">
-            {/* <button className="btn" onClick={ () => {console.log('setTime()')}} >setTime</button> */}
-            {playPauseButton}
-            <button className="btn" onClick={ () => {
-              timerId.current.reset()
-              setRunning(false)
-            }} >Reset</button>
+            {setTimeButton}
+            {!editMode &&
+              <div>
+                {playPauseButton}
+                <button className="btn" onClick={ () => {
+                  timerId.current.reset()
+                  setRunning(false)
+                }} >Reset</button>
+              </div>
+            }
           </div>
         </div>
       </header>
